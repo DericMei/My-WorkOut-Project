@@ -55,6 +55,7 @@ CHANGE COLUMN set_num set_rank VARCHAR(100);
 -- Queries --
 
 -- 1. Highest excercise count (My Favorite exercises)
+
 With A AS
 (
 SELECT		date, exercise_name
@@ -66,11 +67,15 @@ FROM		A
 GROUP BY	exercise_name
 ORDER BY	exercise_count DESC;
 
--- 2. Total number of workouts in the record
+-- 2. Total days workouted
+
 SELECT		COUNT(DISTINCT(date)) AS total_workouts
 FROM		workout;
 
--- 3. Total Load Over Time for Bench Press
+-- 3. Total Load Over Time
+
+-- 3a. Bench Press
+
 WITH A AS
 (
 SELECT		date, MAX(weight) AS max_weight
@@ -101,3 +106,47 @@ GROUP BY	workout.date, workout.exercise_name, workout.set_rank, workout.weight, 
 SELECT		date, exercise_name, SUM(set_load) AS total_load
 FROM		C
 GROUP BY	date, exercise_name;
+
+-- 3b. Chin Ups
+
+SELECT		date, exercise_name, SUM(set_load) AS total_load
+FROM 		(
+			SELECT		DISTINCT*
+			FROM		workout
+            ) subquery
+WHERE 		exercise_name = 'Chin Up'
+GROUP BY	date, exercise_name;
+
+-- 3c. Overhead Press
+
+SELECT		date, exercise_name, SUM(set_load) AS total_load
+FROM 		(
+			SELECT		DISTINCT*
+			FROM		workout
+            ) subquery
+WHERE 		exercise_name = 'Overhead Press (Barbell)'
+GROUP BY	date, exercise_name;
+
+-- 4. One Rep Max
+-- I am querying to find the best performing set for each exercise with the highest weight and highest rep count corresponding to it.
+-- Then I am going to use the Epley formula to calculate the one rep max based on the stats, since I never actually tested my one rep max.
+
+WITH A AS
+(
+SELECT		exercise_name, MAX(weight) AS max_weight
+FROM		workout
+GROUP BY	exercise_name
+),
+B AS
+(
+SELECT		A.exercise_name, A.max_weight, MAX(workout.rep) AS max_rep
+FROM		A
+INNER JOIN	workout
+ON			A.exercise_name = workout.exercise_name
+			AND A.max_weight = workout.weight
+GROUP BY	A.exercise_name, A.max_weight
+HAVING		max_rep <15
+)
+SELECT		exercise_name, max_weight, max_rep, max_weight*(1 + 0.0333 * max_rep) AS one_rep_max
+FROM		B
+ORDER BY	one_rep_max DESC;
